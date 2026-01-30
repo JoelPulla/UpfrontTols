@@ -1,0 +1,33 @@
+# Entorno virtual
+venv/
+env/
+.env
+.venv
+
+# Archivos de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos generados por herramientas
+*.log
+*.pid
+*.sqlite3
+
+# Configuración de editor
+.vscode/
+.idea/
+
+# Byte-compiled / cache
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Configuración de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Carpeta de tests si genera caches
+.
