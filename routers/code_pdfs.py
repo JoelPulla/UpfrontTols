@@ -111,7 +111,6 @@ async def merge_pdfs(files: list[UploadFile] = File(...)):
             reporte[key] = "✔ Unión completada"
 
     zip_buffer.seek(0)
-
     # --------------------------------------
     # RETORNAR ZIP COMO DESCARGA
     # --------------------------------------
