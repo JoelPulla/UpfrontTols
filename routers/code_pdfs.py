@@ -16,20 +16,25 @@ PATRON_FACTURA = re.compile(r"F-(\d+)\sAPL-(\d+)", re.IGNORECASE)
 PATRON_ANEXO = re.compile(r"ANX-(\d+)\sAPL-(\d+)", re.IGNORECASE)
 
 
-@app.post("/pdf/merge_pdfs/")
-async def merge_pdfs(files: list[UploadFile] = File(...)):
+@app.post("/pdf/merge_zip/")
+async def merge_pdfs_from_zip(zip_file: UploadFile = File(...)):
+    if not zip_file.filename.lower().endswith(".zip"):
+        raise HTTPException(400, "Debe enviar un archivo ZIP.")
 
-    if len(files) < 2:
-        raise HTTPException(400, "Se requieren al menos 2 archivos PDF.")
+    contenido_zip = await zip_file.read()
+
+    try:
+        zip_in = zipfile.ZipFile(io.BytesIO(contenido_zip))
+    except zipfile.BadZipFile:
+        raise HTTPException(400, "El archivo no es un ZIP válido.")
 
     documentos = {}
     reporte = {}
 
     # --------------------------------------
-    # PROCESAR ARCHIVOS
+    # LEER PDFS DESDE EL ZIP
     # --------------------------------------
-    for f in files:
-        nombre = f.filename
+    for nombre in zip_in.namelist():
 
         if not nombre.lower().endswith(".pdf"):
             continue
@@ -40,7 +45,7 @@ async def merge_pdfs(files: list[UploadFile] = File(...)):
         if not m1 and not m2:
             continue
 
-        contenido = await f.read()
+        contenido = zip_in.read(nombre)
 
         if m1:
             num_factura, apl = m1.groups()
@@ -71,7 +76,7 @@ async def merge_pdfs(files: list[UploadFile] = File(...)):
             documentos[apl]["num_anexo"] = num_anexo
 
     # --------------------------------------
-    # CREAR ZIP EN MEMORIA
+    # CREAR ZIP DE SALIDA EN MEMORIA
     # --------------------------------------
     zip_buffer = io.BytesIO()
 
@@ -95,7 +100,6 @@ async def merge_pdfs(files: list[UploadFile] = File(...)):
                 reporte[key] = f"❌ Falta ANEXO para factura F-{nf}"
                 continue
 
-            # Unir PDFs en el mismo bloque por simplicidad
             writer = PdfWriter()
 
             for pdf_bytes in (factura, anexo):
@@ -111,9 +115,7 @@ async def merge_pdfs(files: list[UploadFile] = File(...)):
             reporte[key] = "✔ Unión completada"
 
     zip_buffer.seek(0)
-    # --------------------------------------
-    # RETORNAR ZIP COMO DESCARGA
-    # --------------------------------------
+
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
